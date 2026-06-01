@@ -736,7 +736,23 @@
             const sc = document.getElementById('recent-sessions'), ss = document.getElementById('recent-sessions-section');
             if (d.recent_sessions && d.recent_sessions.length > 0) {
                 ss.style.display = 'block';
-                sc.innerHTML = d.recent_sessions.map(s => '<div class="session-item"><div class="session-text" onclick="viewSession(\'' + escapeHtml(s.id) + '\')">' + escapeHtml(s.summary||'No summary').substring(0,120) + '</div><button class="session-delete" onclick="event.stopPropagation();deleteSession(\'' + escapeHtml(s.id) + '\')" title="Delete">x</button></div>').join('');
+                sc.innerHTML = '';
+                d.recent_sessions.forEach(s => {
+                    const item = document.createElement('div');
+                    item.className = 'session-item';
+                    const text = document.createElement('div');
+                    text.className = 'session-text';
+                    text.textContent = (s.summary || 'No summary').substring(0, 120);
+                    text.addEventListener('click', () => viewSession(s.id));
+                    const del = document.createElement('button');
+                    del.className = 'session-delete';
+                    del.textContent = 'x';
+                    del.title = 'Delete';
+                    del.addEventListener('click', (e) => { e.stopPropagation(); deleteSession(s.id); });
+                    item.appendChild(text);
+                    item.appendChild(del);
+                    sc.appendChild(item);
+                });
             } else { ss.style.display = 'none'; }
         } catch(e) {}
     }
@@ -758,7 +774,11 @@
         const body = document.getElementById('session-detail-body');
         body.innerHTML = '<p style="color:var(--text-secondary)">Loading session details...</p>';
         try {
-            const r = await fetch('/api/session/details', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({session_id:sessionId})});
+            const r = await fetch('/api/session/details', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({session_id: sessionId})
+            });
             const d = await r.json();
             if (d.error) { body.innerHTML = '<p>Error: ' + escapeHtml(d.error) + '</p>'; return; }
             let topics = [];
@@ -766,31 +786,97 @@
             let entities = [];
             try { entities = JSON.parse(d.entities || '[]'); } catch(e) {}
             const ts = d.timestamp ? new Date(d.timestamp).toLocaleString() : 'Unknown';
-            let html = '<div style="margin-bottom:16px;font-size:0.8em;color:var(--text-muted)">' + escapeHtml(ts) + ' | ' + (d.message_count||0) + ' messages' + (d.user_name ? ' | User: ' + escapeHtml(d.user_name) : '') + '</div>';
-            html += '<div style="margin-bottom:16px;"><h4 style="font-size:0.75em;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px">Summary</h4><div style="padding:14px;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;border-left:3px solid var(--accent);line-height:1.6;font-size:0.9em">' + escapeHtml(d.summary || 'No summary available') + '</div></div>';
-            if (topics.length > 0) {
-                html += '<div style="margin-bottom:16px;"><h4 style="font-size:0.75em;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px">Topics Discussed</h4><div style="display:flex;flex-wrap:wrap;gap:6px">' + topics.map(t => '<span style="padding:4px 12px;border:1px solid var(--border);border-radius:16px;font-size:0.8em;color:var(--accent);background:var(--bg-card)">' + escapeHtml(t) + '</span>').join('') + '</div></div>';
-            }
-            if (entities.length > 0) {
-                html += '<div style="margin-bottom:16px;"><h4 style="font-size:0.75em;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px">Key Entities</h4><div style="display:flex;flex-wrap:wrap;gap:6px">' + entities.map(e => '<span style="padding:4px 12px;border:1px solid rgba(168,85,247,0.3);border-radius:16px;font-size:0.8em;color:#a855f7;background:var(--bg-card)">' + escapeHtml(e) + '</span>').join('') + '</div></div>';
-            }
-            if (d.facts && d.facts.length > 0) {
-                html += '<div style="margin-bottom:16px;"><h4 style="font-size:0.75em;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px">Facts Remembered</h4>';
-                d.facts.forEach(f => {
-                    html += '<div style="padding:10px 14px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;font-size:0.85em;display:flex;align-items:flex-start;gap:8px"><span style="color:var(--success);font-size:0.7em;font-weight:600;text-transform:uppercase;padding:2px 8px;border:1px solid rgba(46,213,115,0.3);border-radius:10px;flex-shrink:0">' + escapeHtml(f.category||'fact') + '</span><span style="color:var(--text-secondary)">' + escapeHtml(f.content) + '</span></div>';
-                });
-                html += '</div>';
-            }
-            html += '<button onclick="continueSession(\'' + escapeHtml(sessionId) + '\',\'' + escapeHtml((d.summary||'').replace(/'/g,"")) + '\')" style="width:100%;padding:12px;border:1px solid var(--accent);border-radius:10px;background:transparent;color:var(--accent);cursor:pointer;font-family:inherit;font-size:0.9em;transition:all 0.3s;margin-top:8px" onmouseover="this.style.background=\'var(--accent)\';this.style.color=\'white\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--accent)\'">Continue This Conversation</button>';
-            body.innerHTML = html;
-        } catch(e) { body.innerHTML = '<p>Error loading session</p>'; }
-    }
 
-    function continueSession(sessionId, summary) {
-        closeModal('session-modal');
-        closeSidebar();
-        const prompt = 'In our previous conversation, we discussed: ' + summary + '. Let us continue from where we left off.';
-        sendMessage(prompt);
+            // Build with DOM
+            body.innerHTML = '';
+
+            // Metadata line
+            const meta = document.createElement('div');
+            meta.style.cssText = 'margin-bottom:16px;font-size:0.8em;color:var(--text-muted)';
+            meta.textContent = ts + ' | ' + (d.message_count || 0) + ' messages' + (d.user_name ? ' | User: ' + d.user_name : '');
+            body.appendChild(meta);
+
+            // Summary section
+            const sumSection = document.createElement('div');
+            sumSection.style.marginBottom = '16px';
+            sumSection.innerHTML = '<h4 style="font-size:0.75em;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px">Summary</h4>';
+            const sumBox = document.createElement('div');
+            sumBox.style.cssText = 'padding:14px;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;border-left:3px solid var(--accent);line-height:1.6;font-size:0.9em';
+            sumBox.textContent = d.summary || 'No summary available';
+            sumSection.appendChild(sumBox);
+            body.appendChild(sumSection);
+
+            // Topics
+            if (topics.length > 0) {
+                const topicSection = document.createElement('div');
+                topicSection.style.marginBottom = '16px';
+                topicSection.innerHTML = '<h4 style="font-size:0.75em;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px">Topics Discussed</h4>';
+                const topicWrap = document.createElement('div');
+                topicWrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px';
+                topics.forEach(t => {
+                    const chip = document.createElement('span');
+                    chip.style.cssText = 'padding:4px 12px;border:1px solid var(--border);border-radius:16px;font-size:0.8em;color:var(--accent);background:var(--bg-card)';
+                    chip.textContent = t;
+                    topicWrap.appendChild(chip);
+                });
+                topicSection.appendChild(topicWrap);
+                body.appendChild(topicSection);
+            }
+
+            // Entities
+            if (entities.length > 0) {
+                const entSection = document.createElement('div');
+                entSection.style.marginBottom = '16px';
+                entSection.innerHTML = '<h4 style="font-size:0.75em;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px">Key Entities</h4>';
+                const entWrap = document.createElement('div');
+                entWrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px';
+                entities.forEach(e => {
+                    const chip = document.createElement('span');
+                    chip.style.cssText = 'padding:4px 12px;border:1px solid rgba(168,85,247,0.3);border-radius:16px;font-size:0.8em;color:#a855f7;background:var(--bg-card)';
+                    chip.textContent = e;
+                    entWrap.appendChild(chip);
+                });
+                entSection.appendChild(entWrap);
+                body.appendChild(entSection);
+            }
+
+            // Facts
+            if (d.facts && d.facts.length > 0) {
+                const factSection = document.createElement('div');
+                factSection.style.marginBottom = '16px';
+                factSection.innerHTML = '<h4 style="font-size:0.75em;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px">Facts Remembered</h4>';
+                d.facts.forEach(f => {
+                    const row = document.createElement('div');
+                    row.style.cssText = 'padding:10px 14px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;font-size:0.85em;display:flex;align-items:flex-start;gap:8px';
+                    const cat = document.createElement('span');
+                    cat.style.cssText = 'color:var(--success);font-size:0.7em;font-weight:600;text-transform:uppercase;padding:2px 8px;border:1px solid rgba(46,213,115,0.3);border-radius:10px;flex-shrink:0';
+                    cat.textContent = f.category || 'fact';
+                    const cont = document.createElement('span');
+                    cont.style.cssText = 'color:var(--text-secondary)';
+                    cont.textContent = f.content;
+                    row.appendChild(cat);
+                    row.appendChild(cont);
+                    factSection.appendChild(row);
+                });
+                body.appendChild(factSection);
+            }
+
+            // Continue button
+            const btn = document.createElement('button');
+            btn.style.cssText = 'width:100%;padding:12px;border:1px solid var(--accent);border-radius:10px;background:transparent;color:var(--accent);cursor:pointer;font-family:inherit;font-size:0.9em;transition:all 0.3s;margin-top:8px';
+            btn.textContent = 'Continue This Conversation';
+            btn.addEventListener('mouseover', () => { btn.style.background = 'var(--accent)'; btn.style.color = 'white'; });
+            btn.addEventListener('mouseout', () => { btn.style.background = 'transparent'; btn.style.color = 'var(--accent)'; });
+            btn.addEventListener('click', () => {
+                closeModal('session-modal');
+                closeSidebar();
+                sendMessage('In our previous conversation, we discussed: ' + (d.summary || '') + '. Let us continue from where we left off.');
+            });
+            body.appendChild(btn);
+
+        } catch(e) {
+            body.innerHTML = '<p>Error loading session: ' + escapeHtml(e.message || String(e)) + '</p>';
+        }
     }
 
     // EXPORT
