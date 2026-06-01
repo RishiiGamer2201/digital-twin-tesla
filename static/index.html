@@ -4,12 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Talk to Nikola Tesla - Digital Twin</title>
-    <meta name="description" content="A Digital Twin of Nikola Tesla grounded in his actual writings, patents, and interviews. Powered by RAG and Gemini AI.">
+    <meta name="description" content="A Digital Twin of Nikola Tesla powered by RAG and Gemini AI.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
     <style>
-        /* ===== RESET & BASE ===== */
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         :root {
             --bg-primary: #06060f;
@@ -27,7 +26,23 @@
             --border-hover: rgba(0, 212, 255, 0.35);
             --danger: #ff4757;
             --success: #2ed573;
+            --warning: #ffa502;
             --sidebar-width: 320px;
+        }
+        html.light-theme {
+            --bg-primary: #f0f2f8;
+            --bg-secondary: #e4e7f0;
+            --bg-card: #ffffff;
+            --bg-card-hover: #f0f3fa;
+            --accent: #0077cc;
+            --accent-dim: #005fa3;
+            --accent-glow: rgba(0, 119, 204, 0.1);
+            --accent-glow-strong: rgba(0, 119, 204, 0.2);
+            --text-primary: #1a1a2e;
+            --text-secondary: #4a4a6a;
+            --text-muted: #7a7a9a;
+            --border: rgba(0, 119, 204, 0.2);
+            --border-hover: rgba(0, 119, 204, 0.4);
         }
         html, body {
             height: 100%;
@@ -35,959 +50,859 @@
             background: var(--bg-primary);
             color: var(--text-primary);
             overflow: hidden;
+            transition: background 0.3s, color 0.3s;
         }
         a { color: var(--accent); text-decoration: none; }
 
-        /* ===== LAYOUT ===== */
-        .app-layout {
-            display: flex;
-            height: 100vh;
-        }
+        .app-layout { display: flex; height: 100vh; }
 
-        /* ===== SIDEBAR ===== */
+        /* SIDEBAR */
         .sidebar {
             width: var(--sidebar-width);
-            background: linear-gradient(180deg, #0a0a20 0%, var(--bg-primary) 100%);
+            background: linear-gradient(180deg, rgba(10,10,32,0.95) 0%, var(--bg-primary) 100%);
             border-right: 1px solid var(--border);
             display: flex;
             flex-direction: column;
             overflow-y: auto;
             flex-shrink: 0;
+            transition: transform 0.3s ease, background 0.3s;
+            z-index: 50;
         }
-        .sidebar-header {
-            padding: 28px 24px 20px;
-            border-bottom: 1px solid var(--border);
-        }
+        .sidebar-header { padding: 24px 20px 16px; border-bottom: 1px solid var(--border); }
         .brand-title {
             font-family: 'Playfair Display', serif;
-            font-size: 1.5em;
+            font-size: 1.4em;
             color: var(--accent);
             animation: electricPulse 3s ease-in-out infinite;
         }
-        .brand-subtitle {
-            font-size: 0.8em;
-            color: var(--text-secondary);
-            margin-top: 6px;
-            font-style: italic;
-        }
+        .brand-subtitle { font-size: 0.75em; color: var(--text-secondary); margin-top: 4px; font-style: italic; }
         @keyframes electricPulse {
             0%, 100% { text-shadow: 0 0 8px rgba(0,212,255,0.4); }
             50% { text-shadow: 0 0 20px rgba(0,212,255,0.7), 0 0 40px rgba(0,212,255,0.2); }
         }
 
-        .sidebar-section {
-            padding: 20px 24px;
-            border-bottom: 1px solid var(--border);
-        }
+        .sidebar-section { padding: 16px 20px; border-bottom: 1px solid var(--border); }
         .sidebar-section h3 {
-            font-size: 0.7em;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            color: var(--text-muted);
-            margin-bottom: 14px;
-            font-weight: 600;
+            font-size: 0.65em; text-transform: uppercase; letter-spacing: 1.5px;
+            color: var(--text-muted); margin-bottom: 12px; font-weight: 600;
         }
-
-        /* Memory Stats */
-        .stat-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         .stat-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 12px;
-            text-align: center;
-            transition: all 0.3s ease;
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+            padding: 10px; text-align: center; transition: all 0.3s ease;
         }
-        .stat-card:hover {
-            border-color: var(--border-hover);
-            background: var(--bg-card-hover);
-        }
-        .stat-value {
-            font-size: 1.5em;
-            font-weight: 700;
-            color: var(--accent);
-        }
-        .stat-label {
-            font-size: 0.7em;
-            color: var(--text-secondary);
-            margin-top: 4px;
-        }
+        .stat-card:hover { border-color: var(--border-hover); background: var(--bg-card-hover); }
+        .stat-value { font-size: 1.4em; font-weight: 700; color: var(--accent); }
+        .stat-label { font-size: 0.65em; color: var(--text-secondary); margin-top: 2px; }
 
-        /* Voice Toggle */
-        .toggle-group {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
+        .toggle-group { display: flex; flex-direction: column; gap: 10px; }
         .toggle-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 10px 14px;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.2s ease;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 8px 12px; background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 10px; cursor: pointer; transition: all 0.2s ease;
         }
         .toggle-item:hover { border-color: var(--border-hover); }
-        .toggle-label {
-            font-size: 0.85em;
-            color: var(--text-primary);
-        }
+        .toggle-label { font-size: 0.82em; color: var(--text-primary); }
         .toggle-switch {
-            position: relative;
-            width: 40px;
-            height: 22px;
-            background: #2a2a4a;
-            border-radius: 11px;
-            transition: all 0.3s ease;
-            cursor: pointer;
+            position: relative; width: 38px; height: 20px; background: #2a2a4a;
+            border-radius: 10px; transition: all 0.3s ease; cursor: pointer;
         }
-        .toggle-switch.active {
-            background: var(--accent-dim);
-            box-shadow: 0 0 12px var(--accent-glow);
-        }
+        .toggle-switch.active { background: var(--accent-dim); box-shadow: 0 0 12px var(--accent-glow); }
         .toggle-switch::after {
-            content: '';
-            position: absolute;
-            top: 3px;
-            left: 3px;
-            width: 16px;
-            height: 16px;
-            background: white;
-            border-radius: 50%;
-            transition: all 0.3s ease;
+            content: ''; position: absolute; top: 2px; left: 2px;
+            width: 16px; height: 16px; background: white; border-radius: 50%; transition: all 0.3s ease;
         }
-        .toggle-switch.active::after {
-            transform: translateX(18px);
-        }
+        .toggle-switch.active::after { transform: translateX(18px); }
 
-        /* Session Buttons */
         .sidebar-btn {
-            width: 100%;
-            padding: 10px 16px;
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            background: var(--bg-card);
-            color: var(--text-primary);
-            font-size: 0.85em;
-            font-family: inherit;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-bottom: 8px;
+            width: 100%; padding: 9px 14px; border: 1px solid var(--border); border-radius: 10px;
+            background: var(--bg-card); color: var(--text-primary); font-size: 0.82em;
+            font-family: inherit; cursor: pointer; transition: all 0.3s ease; margin-bottom: 6px;
         }
-        .sidebar-btn:hover {
-            background: var(--bg-card-hover);
-            border-color: var(--border-hover);
-            box-shadow: 0 0 15px var(--accent-glow);
-        }
-        .sidebar-btn.danger:hover {
-            border-color: rgba(255, 71, 87, 0.4);
-            box-shadow: 0 0 15px rgba(255, 71, 87, 0.15);
-        }
+        .sidebar-btn:hover { background: var(--bg-card-hover); border-color: var(--border-hover); box-shadow: 0 0 15px var(--accent-glow); }
+        .sidebar-btn.danger:hover { border-color: rgba(255,71,87,0.4); box-shadow: 0 0 15px rgba(255,71,87,0.15); }
 
-        .sidebar-footer {
-            margin-top: auto;
-            padding: 16px 24px;
-            font-size: 0.7em;
-            color: var(--text-muted);
-            line-height: 1.6;
-        }
-
-        /* Recent Sessions */
         .session-item {
-            padding: 10px 12px;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            margin-bottom: 8px;
-            font-size: 0.8em;
-            color: var(--text-secondary);
-            line-height: 1.4;
-            display: flex;
-            align-items: flex-start;
-            gap: 8px;
+            padding: 8px 10px; background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 8px; margin-bottom: 6px; font-size: 0.78em; color: var(--text-secondary);
+            line-height: 1.4; display: flex; align-items: flex-start; gap: 6px;
         }
-        .session-text {
-            flex: 1;
-            min-width: 0;
-            word-break: break-word;
-        }
+        .session-text { flex: 1; min-width: 0; word-break: break-word; }
         .session-delete {
-            flex-shrink: 0;
-            width: 24px;
-            height: 24px;
-            border: 1px solid rgba(255, 71, 87, 0.25);
-            border-radius: 6px;
-            background: transparent;
-            color: var(--text-muted);
-            font-size: 0.85em;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
-            margin-top: 1px;
+            flex-shrink: 0; width: 22px; height: 22px; border: 1px solid rgba(255,71,87,0.25);
+            border-radius: 5px; background: transparent; color: var(--text-muted);
+            font-size: 0.8em; cursor: pointer; display: flex; align-items: center;
+            justify-content: center; transition: all 0.2s ease;
         }
-        .session-delete:hover {
-            border-color: var(--danger);
-            color: var(--danger);
-            background: rgba(255, 71, 87, 0.1);
-        }
+        .session-delete:hover { border-color: var(--danger); color: var(--danger); background: rgba(255,71,87,0.1); }
 
-        /* ===== MAIN CHAT AREA ===== */
+        .sidebar-footer { margin-top: auto; padding: 12px 20px; font-size: 0.65em; color: var(--text-muted); line-height: 1.5; }
+
+        /* MAIN CONTENT */
         .main-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            min-width: 0;
-            position: relative;
+            flex: 1; display: flex; flex-direction: column; min-width: 0; position: relative;
         }
-
-        /* Background effect */
         .main-content::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background:
-                radial-gradient(ellipse at 20% 30%, rgba(0,212,255,0.03) 0%, transparent 50%),
-                radial-gradient(ellipse at 80% 70%, rgba(0,100,200,0.02) 0%, transparent 50%);
-            pointer-events: none;
-            z-index: 0;
+            content: ''; position: absolute; inset: 0;
+            background: radial-gradient(ellipse at 20% 30%, rgba(0,212,255,0.03) 0%, transparent 50%),
+                        radial-gradient(ellipse at 80% 70%, rgba(0,100,200,0.02) 0%, transparent 50%);
+            pointer-events: none; z-index: 0;
         }
 
         .chat-header {
-            padding: 24px 32px;
-            border-bottom: 1px solid var(--border);
-            text-align: center;
-            position: relative;
-            z-index: 1;
-            background: rgba(6, 6, 15, 0.8);
-            backdrop-filter: blur(10px);
+            padding: 18px 28px; border-bottom: 1px solid var(--border); text-align: center;
+            position: relative; z-index: 1; background: rgba(6,6,15,0.8); backdrop-filter: blur(10px);
+            transition: background 0.3s;
         }
+        .light-theme .chat-header { background: rgba(240,242,248,0.9); }
         .chat-header h1 {
-            font-family: 'Playfair Display', serif;
-            font-size: 1.8em;
-            color: var(--accent);
-            font-weight: 700;
-            text-shadow: 0 0 30px rgba(0,212,255,0.25);
+            font-family: 'Playfair Display', serif; font-size: 1.6em; color: var(--accent);
+            font-weight: 700; text-shadow: 0 0 30px rgba(0,212,255,0.25); display: inline;
         }
-        .chat-header p {
-            color: var(--text-secondary);
+        .chat-header p { color: var(--text-secondary); font-size: 0.85em; margin-top: 4px; }
+
+        .header-controls {
+            position: absolute; right: 20px; top: 50%; transform: translateY(-50%);
+            display: flex; gap: 8px; align-items: center;
+        }
+        .header-btn {
+            width: 34px; height: 34px; border: 1px solid var(--border); border-radius: 8px;
+            background: var(--bg-card); color: var(--text-secondary); cursor: pointer;
+            display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;
             font-size: 0.9em;
-            margin-top: 6px;
+        }
+        .header-btn:hover { border-color: var(--border-hover); color: var(--accent); }
+        .hamburger {
+            position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+            display: none; width: 34px; height: 34px; border: 1px solid var(--border);
+            border-radius: 8px; background: var(--bg-card); color: var(--text-secondary);
+            cursor: pointer; align-items: center; justify-content: center; font-size: 1.2em;
         }
 
-        /* Messages Container */
+        /* TOOLBAR */
+        .toolbar {
+            display: flex; gap: 8px; padding: 10px 28px; border-bottom: 1px solid var(--border);
+            background: var(--bg-primary); position: relative; z-index: 1; flex-wrap: wrap;
+            transition: background 0.3s;
+        }
+        .toolbar-btn {
+            padding: 6px 14px; border: 1px solid var(--border); border-radius: 20px;
+            background: var(--bg-card); color: var(--text-secondary); font-size: 0.78em;
+            font-family: inherit; cursor: pointer; transition: all 0.3s ease; white-space: nowrap;
+        }
+        .toolbar-btn:hover { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 12px var(--accent-glow); }
+
+        /* MESSAGES */
         .messages-container {
-            flex: 1;
-            overflow-y: auto;
-            padding: 24px 32px;
-            position: relative;
-            z-index: 1;
-            scroll-behavior: smooth;
+            flex: 1; overflow-y: auto; padding: 20px 28px; position: relative; z-index: 1; scroll-behavior: smooth;
         }
-        .messages-container::-webkit-scrollbar { width: 5px; }
+        .messages-container::-webkit-scrollbar { width: 4px; }
         .messages-container::-webkit-scrollbar-track { background: transparent; }
-        .messages-container::-webkit-scrollbar-thumb {
-            background: var(--accent-dim);
-            border-radius: 3px;
-        }
+        .messages-container::-webkit-scrollbar-thumb { background: var(--accent-dim); border-radius: 2px; }
 
-        /* Message Bubble */
-        .message {
-            display: flex;
-            gap: 14px;
-            margin-bottom: 20px;
-            animation: fadeInUp 0.4s ease;
-        }
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(12px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        .message { display: flex; gap: 12px; margin-bottom: 16px; animation: fadeInUp 0.4s ease; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
         .message-avatar {
-            width: 38px;
-            height: 38px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.1em;
-            flex-shrink: 0;
-            font-weight: 700;
+            width: 36px; height: 36px; border-radius: 10px; display: flex;
+            align-items: center; justify-content: center; font-size: 0.85em;
+            flex-shrink: 0; font-weight: 700; position: relative;
         }
         .message.assistant .message-avatar {
-            background: linear-gradient(135deg, #0055aa, #0099dd);
-            color: white;
+            background: linear-gradient(135deg, #0055aa, #0099dd); color: white;
             box-shadow: 0 0 15px var(--accent-glow);
         }
-        .message.user .message-avatar {
-            background: linear-gradient(135deg, #2a2a4a, #3a3a5a);
-            color: var(--text-secondary);
+        .message.user .message-avatar { background: linear-gradient(135deg, #2a2a4a, #3a3a5a); color: var(--text-secondary); }
+        .emotion-dot {
+            position: absolute; bottom: -2px; right: -2px; width: 10px; height: 10px;
+            border-radius: 50%; border: 2px solid var(--bg-primary); transition: all 0.3s ease;
         }
-        .message-body {
-            flex: 1;
-            min-width: 0;
-        }
-        .message-role {
-            font-size: 0.75em;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 6px;
-        }
+        .emotion-excited { background: #ffd700; box-shadow: 0 0 6px rgba(255,215,0,0.6); }
+        .emotion-bitter { background: #ff4757; box-shadow: 0 0 6px rgba(255,71,87,0.6); }
+        .emotion-nostalgic { background: #a855f7; box-shadow: 0 0 6px rgba(168,85,247,0.6); }
+        .emotion-philosophical { background: #3b82f6; box-shadow: 0 0 6px rgba(59,130,246,0.6); }
+        .emotion-neutral { background: var(--accent); box-shadow: 0 0 6px var(--accent-glow); }
+
+        .message-body { flex: 1; min-width: 0; }
+        .message-role { font-size: 0.7em; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
         .message.assistant .message-role { color: var(--accent); }
         .message.user .message-role { color: var(--text-secondary); }
 
         .message-content {
-            padding: 16px 20px;
-            border-radius: 12px;
-            line-height: 1.7;
-            font-size: 0.92em;
+            padding: 14px 18px; border-radius: 12px; line-height: 1.65; font-size: 0.9em;
         }
         .message.assistant .message-content {
             background: linear-gradient(135deg, var(--bg-card) 0%, rgba(0,212,255,0.04) 100%);
-            border: 1px solid var(--border);
-            border-left: 3px solid var(--accent);
+            border: 1px solid var(--border); border-left: 3px solid var(--accent);
         }
         .message.user .message-content {
-            background: var(--bg-card);
-            border: 1px solid rgba(255,255,255,0.06);
+            background: var(--bg-card); border: 1px solid rgba(255,255,255,0.06);
             border-left: 3px solid #4a5568;
         }
 
-        /* Sources Panel */
+        /* Confidence badge */
+        .confidence-badge {
+            display: inline-block; padding: 2px 10px; border-radius: 12px;
+            font-size: 0.68em; font-weight: 600; margin-top: 6px; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .confidence-grounded { border: 1px solid var(--success); color: var(--success); }
+        .confidence-inferred { border: 1px solid var(--warning); color: var(--warning); }
+        .confidence-speculative { border: 1px solid var(--danger); color: var(--danger); }
+
+        /* Sources */
         .sources-panel {
-            margin-top: 10px;
-            padding: 12px 16px;
-            background: rgba(0, 212, 255, 0.03);
-            border: 1px solid var(--border);
-            border-radius: 10px;
+            margin-top: 8px; padding: 10px 14px; background: rgba(0,212,255,0.03);
+            border: 1px solid var(--border); border-radius: 10px;
         }
-        .sources-title {
-            font-size: 0.7em;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: var(--text-muted);
-            margin-bottom: 8px;
-            font-weight: 600;
-        }
-        .source-chips {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-        }
+        .sources-title { font-size: 0.65em; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 6px; font-weight: 600; }
+        .source-chips { display: flex; flex-wrap: wrap; gap: 5px; }
         .source-chip {
-            background: linear-gradient(135deg, #0f1535, #141850);
-            border: 1px solid rgba(0,212,255,0.2);
-            border-radius: 20px;
-            padding: 4px 12px;
-            font-size: 0.72em;
-            color: #7dd3fc;
-            cursor: pointer;
-            transition: all 0.2s ease;
+            background: linear-gradient(135deg, #0f1535, #141850); border: 1px solid rgba(0,212,255,0.2);
+            border-radius: 20px; padding: 3px 10px; font-size: 0.7em; color: #7dd3fc;
+            cursor: pointer; transition: all 0.2s ease;
         }
-        .source-chip:hover {
-            border-color: var(--accent);
-            box-shadow: 0 0 10px var(--accent-glow);
-        }
+        .source-chip:hover { border-color: var(--accent); box-shadow: 0 0 10px var(--accent-glow); }
         .source-preview {
-            margin-top: 8px;
-            padding: 10px;
-            background: var(--bg-secondary);
-            border-radius: 6px;
-            font-size: 0.78em;
-            color: var(--text-secondary);
-            line-height: 1.5;
-            display: none;
+            margin-top: 6px; padding: 8px; background: var(--bg-secondary); border-radius: 6px;
+            font-size: 0.75em; color: var(--text-secondary); line-height: 1.4; display: none;
             border-left: 2px solid var(--accent-dim);
         }
 
-        /* Chat Input */
+        /* Suggestions */
+        .suggestions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+        .suggestion-chip {
+            padding: 5px 12px; border: 1px solid var(--border); border-radius: 16px;
+            background: var(--bg-card); color: var(--accent); font-size: 0.75em;
+            cursor: pointer; transition: all 0.2s ease; font-family: inherit;
+        }
+        .suggestion-chip:hover { border-color: var(--accent); background: var(--bg-card-hover); box-shadow: 0 0 10px var(--accent-glow); }
+
+        /* Thinking */
+        .thinking { display: flex; gap: 5px; padding: 6px 0; }
+        .thinking span { width: 7px; height: 7px; background: var(--accent); border-radius: 50%; animation: bounce 1.4s ease-in-out infinite; }
+        .thinking span:nth-child(2) { animation-delay: 0.2s; }
+        .thinking span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes bounce { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
+
+        /* INPUT AREA */
         .chat-input-area {
-            padding: 20px 32px;
-            border-top: 1px solid var(--border);
-            background: rgba(6, 6, 15, 0.9);
-            backdrop-filter: blur(10px);
-            position: relative;
-            z-index: 1;
+            padding: 16px 28px; border-top: 1px solid var(--border);
+            background: rgba(6,6,15,0.9); backdrop-filter: blur(10px);
+            position: relative; z-index: 1; transition: background 0.3s;
         }
-        .input-wrapper {
-            display: flex;
-            gap: 10px;
-            align-items: flex-end;
-        }
+        .light-theme .chat-input-area { background: rgba(240,242,248,0.95); }
+        .input-wrapper { display: flex; gap: 8px; align-items: flex-end; }
         .chat-input {
-            flex: 1;
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            padding: 14px 18px;
-            color: var(--text-primary);
-            font-family: inherit;
-            font-size: 0.92em;
-            resize: none;
-            min-height: 48px;
-            max-height: 150px;
-            outline: none;
-            transition: border-color 0.3s ease, box-shadow 0.3s ease;
-            line-height: 1.5;
+            flex: 1; background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: 14px; padding: 12px 16px; color: var(--text-primary);
+            font-family: inherit; font-size: 0.9em; resize: none; min-height: 44px;
+            max-height: 140px; outline: none; transition: border-color 0.3s, box-shadow 0.3s; line-height: 1.5;
         }
-        .chat-input:focus {
-            border-color: var(--accent-dim);
-            box-shadow: 0 0 20px var(--accent-glow);
-        }
+        .chat-input:focus { border-color: var(--accent-dim); box-shadow: 0 0 20px var(--accent-glow); }
         .chat-input::placeholder { color: var(--text-muted); }
 
         .send-btn, .mic-btn {
-            width: 48px;
-            height: 48px;
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            background: var(--bg-card);
-            color: var(--accent);
-            font-size: 1.2em;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s ease;
-            flex-shrink: 0;
+            width: 44px; height: 44px; border: 1px solid var(--border); border-radius: 12px;
+            background: var(--bg-card); color: var(--accent); font-size: 1.1em;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: all 0.3s ease; flex-shrink: 0;
         }
         .send-btn:hover {
-            background: linear-gradient(135deg, #0066aa, #0099dd);
-            color: white;
-            border-color: transparent;
-            box-shadow: 0 4px 20px var(--accent-glow-strong);
-            transform: translateY(-1px);
-        }
-        .mic-btn:hover {
-            border-color: var(--border-hover);
+            background: linear-gradient(135deg, #0066aa, #0099dd); color: white;
+            border-color: transparent; box-shadow: 0 4px 20px var(--accent-glow-strong); transform: translateY(-1px);
         }
         .mic-btn.recording {
-            background: rgba(255, 71, 87, 0.15);
-            border-color: var(--danger);
-            color: var(--danger);
+            background: rgba(255,71,87,0.15); border-color: var(--danger); color: var(--danger);
             animation: micPulse 1s ease-in-out infinite;
         }
-        @keyframes micPulse {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(255,71,87,0.3); }
-            50% { box-shadow: 0 0 0 8px rgba(255,71,87,0); }
-        }
+        @keyframes micPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,71,87,0.3); } 50% { box-shadow: 0 0 0 8px rgba(255,71,87,0); } }
 
-        /* Thinking Indicator */
-        .thinking {
-            display: flex;
-            gap: 5px;
-            padding: 8px 0;
-        }
-        .thinking span {
-            width: 8px;
-            height: 8px;
-            background: var(--accent);
-            border-radius: 50%;
-            animation: bounce 1.4s ease-in-out infinite;
-        }
-        .thinking span:nth-child(2) { animation-delay: 0.2s; }
-        .thinking span:nth-child(3) { animation-delay: 0.4s; }
-        @keyframes bounce {
-            0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
-            40% { transform: scale(1); opacity: 1; }
-        }
-
-        /* Typing effect */
-        .typing-cursor::after {
-            content: '|';
-            animation: blink 0.8s step-end infinite;
-            color: var(--accent);
-        }
-        @keyframes blink {
-            50% { opacity: 0; }
-        }
-
-        /* Toast */
+        /* TOAST */
         .toast {
-            position: fixed;
-            bottom: 80px;
-            right: 32px;
-            padding: 12px 20px;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            color: var(--text-primary);
-            font-size: 0.85em;
-            z-index: 100;
-            opacity: 0;
-            transform: translateY(10px);
-            transition: all 0.3s ease;
-            pointer-events: none;
+            position: fixed; bottom: 70px; right: 28px; padding: 10px 18px;
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+            color: var(--text-primary); font-size: 0.82em; z-index: 200;
+            opacity: 0; transform: translateY(10px); transition: all 0.3s ease; pointer-events: none;
         }
-        .toast.show {
-            opacity: 1;
-            transform: translateY(0);
-        }
+        .toast.show { opacity: 1; transform: translateY(0); }
 
-        /* ===== RESPONSIVE ===== */
+        /* MODAL OVERLAY */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100;
+            display: none; align-items: center; justify-content: center;
+            backdrop-filter: blur(4px); animation: fadeIn 0.2s ease;
+        }
+        .modal-overlay.active { display: flex; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .modal {
+            background: var(--bg-primary); border: 1px solid var(--border); border-radius: 16px;
+            width: 90%; max-width: 900px; max-height: 85vh; overflow-y: auto; position: relative;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5); animation: slideUp 0.3s ease;
+        }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        .modal-header {
+            padding: 20px 24px; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .modal-title { font-family: 'Playfair Display', serif; font-size: 1.3em; color: var(--accent); }
+        .modal-close {
+            width: 30px; height: 30px; border: 1px solid var(--border); border-radius: 8px;
+            background: transparent; color: var(--text-secondary); cursor: pointer;
+            display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+        }
+        .modal-close:hover { border-color: var(--danger); color: var(--danger); }
+        .modal-body { padding: 24px; }
+
+        /* TIMELINE */
+        .timeline { position: relative; padding-left: 40px; }
+        .timeline::before {
+            content: ''; position: absolute; left: 14px; top: 0; bottom: 0; width: 2px;
+            background: linear-gradient(180deg, var(--accent) 0%, var(--accent-dim) 50%, transparent 100%);
+            box-shadow: 0 0 10px var(--accent-glow);
+        }
+        .timeline-item { position: relative; margin-bottom: 24px; cursor: pointer; }
+        .timeline-dot {
+            position: absolute; left: -32px; top: 6px; width: 12px; height: 12px;
+            background: var(--accent); border-radius: 50%; border: 2px solid var(--bg-primary);
+            box-shadow: 0 0 8px var(--accent-glow); transition: all 0.3s ease;
+        }
+        .timeline-item:hover .timeline-dot { transform: scale(1.4); box-shadow: 0 0 16px var(--accent-glow-strong); }
+        .timeline-year { font-size: 0.75em; color: var(--accent); font-weight: 700; margin-bottom: 4px; }
+        .timeline-card {
+            padding: 12px 16px; background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 10px; transition: all 0.3s ease;
+        }
+        .timeline-item:hover .timeline-card { border-color: var(--border-hover); background: var(--bg-card-hover); box-shadow: 0 4px 20px var(--accent-glow); }
+        .timeline-card h4 { font-size: 0.9em; margin-bottom: 4px; }
+        .timeline-card p { font-size: 0.8em; color: var(--text-secondary); line-height: 1.4; }
+
+        /* QUIZ */
+        .quiz-container { text-align: center; }
+        .quiz-question { font-size: 1.1em; margin-bottom: 20px; line-height: 1.5; }
+        .quiz-options { display: flex; flex-direction: column; gap: 10px; max-width: 500px; margin: 0 auto 20px; }
+        .quiz-option {
+            padding: 12px 18px; border: 1px solid var(--border); border-radius: 10px;
+            background: var(--bg-card); color: var(--text-primary); cursor: pointer;
+            font-family: inherit; font-size: 0.9em; text-align: left; transition: all 0.2s ease;
+        }
+        .quiz-option:hover { border-color: var(--accent); background: var(--bg-card-hover); }
+        .quiz-option.correct { border-color: var(--success); background: rgba(46,213,115,0.1); color: var(--success); }
+        .quiz-option.wrong { border-color: var(--danger); background: rgba(255,71,87,0.1); color: var(--danger); }
+        .quiz-feedback { margin-top: 16px; padding: 14px; background: var(--bg-card); border-radius: 10px; font-size: 0.88em; line-height: 1.5; }
+        .quiz-score { font-size: 0.85em; color: var(--text-secondary); margin-bottom: 16px; }
+        .quiz-next-btn {
+            margin-top: 16px; padding: 10px 24px; border: 1px solid var(--accent); border-radius: 10px;
+            background: transparent; color: var(--accent); cursor: pointer; font-family: inherit;
+            font-size: 0.9em; transition: all 0.3s;
+        }
+        .quiz-next-btn:hover { background: var(--accent); color: white; }
+
+        /* DEBATE */
+        .debate-input-row { display: flex; gap: 10px; margin-bottom: 20px; }
+        .debate-input {
+            flex: 1; padding: 10px 14px; background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: 10px; color: var(--text-primary); font-family: inherit; font-size: 0.9em; outline: none;
+        }
+        .debate-start-btn {
+            padding: 10px 20px; border: 1px solid var(--accent); border-radius: 10px;
+            background: transparent; color: var(--accent); cursor: pointer; font-family: inherit;
+            font-size: 0.9em; transition: all 0.3s; white-space: nowrap;
+        }
+        .debate-start-btn:hover { background: var(--accent); color: white; }
+        .debate-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .debate-panel {
+            padding: 16px; background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 12px; border-top: 3px solid var(--accent);
+        }
+        .debate-panel.edison { border-top-color: #ffa502; }
+        .debate-panel h4 { font-size: 0.85em; color: var(--accent); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+        .debate-panel.edison h4 { color: #ffa502; }
+        .debate-panel p { font-size: 0.88em; line-height: 1.6; color: var(--text-secondary); }
+
+        /* KNOWLEDGE GRAPH */
+        #graph-canvas {
+            width: 100%; height: 500px; border: 1px solid var(--border); border-radius: 10px;
+            background: var(--bg-secondary); cursor: grab;
+        }
+        #graph-canvas:active { cursor: grabbing; }
+        .graph-legend { display: flex; gap: 16px; margin-top: 12px; justify-content: center; flex-wrap: wrap; }
+        .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.78em; color: var(--text-secondary); }
+        .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+        /* PDF UPLOAD */
+        .upload-area {
+            border: 2px dashed var(--border); border-radius: 12px; padding: 30px;
+            text-align: center; cursor: pointer; transition: all 0.3s;
+        }
+        .upload-area:hover { border-color: var(--accent); background: var(--accent-glow); }
+        .upload-area p { color: var(--text-secondary); font-size: 0.9em; }
+        .upload-input { display: none; }
+
+        /* MOBILE BACKDROP */
+        .mobile-backdrop {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 40;
+            display: none; backdrop-filter: blur(2px);
+        }
+        .mobile-backdrop.active { display: block; }
+
         @media (max-width: 768px) {
-            .sidebar { display: none; }
-            .messages-container { padding: 16px; }
-            .chat-input-area { padding: 12px 16px; }
-            .chat-header h1 { font-size: 1.3em; }
+            .sidebar { position: fixed; left: 0; top: 0; bottom: 0; transform: translateX(-100%); }
+            .sidebar.open { transform: translateX(0); }
+            .hamburger { display: flex; }
+            .messages-container { padding: 14px; }
+            .chat-input-area { padding: 10px 14px; }
+            .chat-header h1 { font-size: 1.2em; }
+            .debate-panels { grid-template-columns: 1fr; }
+            .toolbar { padding: 8px 14px; }
         }
     </style>
 </head>
 <body>
     <div class="app-layout">
-        <!-- SIDEBAR -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <div class="brand-title">Tesla Twin</div>
                 <div class="brand-subtitle">"The present is theirs; the future is mine."</div>
             </div>
-
-            <!-- Memory Stats -->
             <div class="sidebar-section">
                 <h3>Memory Dashboard</h3>
                 <div class="stat-grid">
-                    <div class="stat-card">
-                        <div class="stat-value" id="stat-sessions">0</div>
-                        <div class="stat-label">Sessions</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="stat-messages">0</div>
-                        <div class="stat-label">Messages</div>
-                    </div>
+                    <div class="stat-card"><div class="stat-value" id="stat-sessions">0</div><div class="stat-label">Sessions</div></div>
+                    <div class="stat-card"><div class="stat-value" id="stat-messages">0</div><div class="stat-label">Messages</div></div>
                 </div>
             </div>
-
-            <!-- Voice Controls -->
             <div class="sidebar-section">
                 <h3>Voice Controls</h3>
                 <div class="toggle-group">
-                    <div class="toggle-item" onclick="toggleVoiceOutput()">
-                        <span class="toggle-label">Voice Output (TTS)</span>
-                        <div class="toggle-switch" id="toggle-tts"></div>
-                    </div>
-                    <div class="toggle-item" onclick="toggleVoiceInput()">
-                        <span class="toggle-label">Voice Input (Mic)</span>
-                        <div class="toggle-switch" id="toggle-mic"></div>
-                    </div>
+                    <div class="toggle-item" onclick="toggleVoiceOutput()"><span class="toggle-label">Voice Output</span><div class="toggle-switch" id="toggle-tts"></div></div>
+                    <div class="toggle-item" onclick="toggleVoiceInput()"><span class="toggle-label">Voice Input</span><div class="toggle-switch" id="toggle-mic"></div></div>
                 </div>
             </div>
-
-            <!-- Session Management -->
             <div class="sidebar-section">
                 <h3>Session</h3>
-                <button class="sidebar-btn" onclick="endSession()">End Session & Save Memory</button>
+                <button class="sidebar-btn" onclick="endSession()">Save Session</button>
+                <button class="sidebar-btn" onclick="exportChat()">Export Chat</button>
                 <button class="sidebar-btn danger" onclick="clearChat()">Clear Chat</button>
             </div>
-
-            <!-- Recent Sessions -->
+            <div class="sidebar-section">
+                <h3>Tools</h3>
+                <button class="sidebar-btn" onclick="openModal('upload-modal')">Upload PDF</button>
+            </div>
             <div class="sidebar-section" id="recent-sessions-section" style="display:none;">
                 <h3>Past Sessions</h3>
                 <div id="recent-sessions"></div>
             </div>
-
-            <div class="sidebar-footer">
-                Gemini 2.5 Flash + sentence-transformers + ChromaDB<br>
-                AIMS DTU Summer Project 2026
-            </div>
+            <div class="sidebar-footer">Gemini 2.5 Flash + sentence-transformers + ChromaDB<br>AIMS DTU Summer Project 2026</div>
         </aside>
 
-        <!-- MAIN CHAT -->
+        <div class="mobile-backdrop" id="mobile-backdrop" onclick="closeSidebar()"></div>
+
         <main class="main-content">
             <div class="chat-header">
+                <button class="hamburger" id="hamburger" onclick="openSidebar()">&#9776;</button>
                 <h1>Talk to Nikola Tesla</h1>
                 <p>A Digital Twin grounded in his actual writings, patents, and interviews.</p>
+                <div class="header-controls">
+                    <button class="header-btn" onclick="toggleTheme()" title="Toggle theme" id="theme-btn">&#9788;</button>
+                </div>
             </div>
-
-            <div class="messages-container" id="messages">
-                <!-- Messages rendered here -->
+            <div class="toolbar">
+                <button class="toolbar-btn" onclick="openModal('timeline-modal')">Timeline</button>
+                <button class="toolbar-btn" onclick="openModal('graph-modal')">Knowledge Graph</button>
+                <button class="toolbar-btn" onclick="openModal('quiz-modal')">Quiz Mode</button>
+                <button class="toolbar-btn" onclick="openModal('debate-modal')">Tesla vs Edison</button>
             </div>
-
+            <div class="messages-container" id="messages"></div>
             <div class="chat-input-area">
                 <div class="input-wrapper">
                     <button class="mic-btn" id="mic-btn" onclick="toggleRecording()" title="Voice Input" style="display:none;">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
                     </button>
-                    <textarea class="chat-input" id="chat-input"
-                        placeholder="Ask Tesla anything..."
-                        rows="1"
-                        onkeydown="handleKeyDown(event)"
-                        oninput="autoResize(this)"></textarea>
+                    <textarea class="chat-input" id="chat-input" placeholder="Ask Tesla anything..." rows="1" onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea>
                     <button class="send-btn" onclick="sendMessage()" title="Send">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
                     </button>
                 </div>
             </div>
         </main>
     </div>
 
-    <!-- Toast Notification -->
+    <!-- MODALS -->
+    <div class="modal-overlay" id="timeline-modal"><div class="modal"><div class="modal-header"><div class="modal-title">Tesla's Life Timeline</div><button class="modal-close" onclick="closeModal('timeline-modal')">x</button></div><div class="modal-body"><div class="timeline" id="timeline-content"></div></div></div></div>
+    <div class="modal-overlay" id="graph-modal"><div class="modal" style="max-width:1000px;"><div class="modal-header"><div class="modal-title">Knowledge Graph</div><button class="modal-close" onclick="closeModal('graph-modal')">x</button></div><div class="modal-body"><canvas id="graph-canvas"></canvas><div class="graph-legend"><div class="legend-item"><div class="legend-dot" style="background:#00d4ff"></div>Inventions</div><div class="legend-item"><div class="legend-dot" style="background:#ffd700"></div>People</div><div class="legend-item"><div class="legend-dot" style="background:#a855f7"></div>Places</div><div class="legend-item"><div class="legend-dot" style="background:#2ed573"></div>Concepts</div></div></div></div></div>
+    <div class="modal-overlay" id="quiz-modal"><div class="modal" style="max-width:600px;"><div class="modal-header"><div class="modal-title">Quiz Mode</div><button class="modal-close" onclick="closeModal('quiz-modal')">x</button></div><div class="modal-body"><div class="quiz-container" id="quiz-container"><p>Loading question...</p></div></div></div></div>
+    <div class="modal-overlay" id="debate-modal"><div class="modal"><div class="modal-header"><div class="modal-title">Tesla vs Edison Debate</div><button class="modal-close" onclick="closeModal('debate-modal')">x</button></div><div class="modal-body"><div class="debate-input-row"><input class="debate-input" id="debate-topic" placeholder="Enter a debate topic (e.g., AC vs DC power)"><button class="debate-start-btn" onclick="startDebate()">Start Debate</button></div><div class="debate-panels" id="debate-panels" style="display:none;"><div class="debate-panel tesla"><h4>Nikola Tesla</h4><p id="debate-tesla">...</p></div><div class="debate-panel edison"><h4>Thomas Edison</h4><p id="debate-edison">...</p></div></div></div></div></div>
+    <div class="modal-overlay" id="upload-modal"><div class="modal" style="max-width:500px;"><div class="modal-header"><div class="modal-title">Upload PDF</div><button class="modal-close" onclick="closeModal('upload-modal')">x</button></div><div class="modal-body"><div class="upload-area" onclick="document.getElementById('pdf-input').click()"><p>Click to select a PDF file</p><p style="font-size:0.75em;color:var(--text-muted);margin-top:6px;">Adds content to Tesla's knowledge base</p></div><input type="file" id="pdf-input" accept=".pdf" class="upload-input" onchange="uploadPDF(this)"><div id="upload-status" style="margin-top:12px;font-size:0.85em;color:var(--text-secondary);"></div></div></div></div>
+
     <div class="toast" id="toast"></div>
 
     <script>
-        // ===== STATE =====
-        let voiceOutputEnabled = false;
-        let voiceInputEnabled = false;
-        let isRecording = false;
-        let recognition = null;
-        let isWaiting = false;
+    // STATE
+    let voiceOutputEnabled = false, voiceInputEnabled = false, isRecording = false, recognition = null, isWaiting = false;
+    let quizScore = 0, quizTotal = 0, currentQuiz = null;
+    let chatMessages = [];
 
-        // ===== INIT =====
-        document.addEventListener('DOMContentLoaded', () => {
-            addAssistantMessage(
-                "Good day. I am Nikola Tesla, inventor, electrical engineer, " +
-                "and a man who has dedicated his life to illuminating the world, " +
-                "both literally and figuratively. I have envisioned a future where " +
-                "energy flows freely to all corners of the Earth, where machines " +
-                "think and communicate without wires, and where humanity harnesses " +
-                "the very forces of nature.\n\n" +
-                "What would you like to discuss? Perhaps alternating current, " +
-                "wireless energy, or the wonders I witnessed in my Colorado Springs " +
-                "laboratory? Ask me anything. I have seen the future in my mind's eye.",
-                []
-            );
-            loadMemoryStats();
-            document.getElementById('chat-input').focus();
-        });
+    // INIT
+    document.addEventListener('DOMContentLoaded', () => {
+        const greeting = "Good day. I am Nikola Tesla, inventor, electrical engineer, " +
+            "and a man who has dedicated his life to illuminating the world, " +
+            "both literally and figuratively. I have envisioned a future where " +
+            "energy flows freely to all corners of the Earth, where machines " +
+            "think and communicate without wires, and where humanity harnesses " +
+            "the very forces of nature.\n\n" +
+            "What would you like to discuss? Perhaps alternating current, " +
+            "wireless energy, or the wonders I witnessed in my Colorado Springs " +
+            "laboratory? Ask me anything. I have seen the future in my mind's eye.";
+        addAssistantMessage(greeting, [], 'neutral', 'grounded', []);
+        chatMessages.push({role: 'assistant', content: greeting});
+        loadMemoryStats();
+        document.getElementById('chat-input').focus();
+        if (localStorage.getItem('theme') === 'light') document.documentElement.classList.add('light-theme');
+    });
 
-        // ===== CHAT =====
-        function handleKeyDown(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
-        }
+    // THEME
+    function toggleTheme() {
+        document.documentElement.classList.toggle('light-theme');
+        localStorage.setItem('theme', document.documentElement.classList.contains('light-theme') ? 'light' : 'dark');
+    }
 
-        function autoResize(el) {
-            el.style.height = 'auto';
-            el.style.height = Math.min(el.scrollHeight, 150) + 'px';
-        }
+    // MOBILE
+    function openSidebar() { document.getElementById('sidebar').classList.add('open'); document.getElementById('mobile-backdrop').classList.add('active'); }
+    function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('mobile-backdrop').classList.remove('active'); }
 
-        async function sendMessage() {
-            const input = document.getElementById('chat-input');
-            const message = input.value.trim();
-            if (!message || isWaiting) return;
+    // MODAL
+    function openModal(id) {
+        document.getElementById(id).classList.add('active');
+        if (id === 'timeline-modal') loadTimeline();
+        if (id === 'graph-modal') setTimeout(drawGraph, 100);
+        if (id === 'quiz-modal') loadQuiz();
+        closeSidebar();
+    }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
-            // Show user message
-            addUserMessage(message);
-            input.value = '';
-            input.style.height = 'auto';
+    // CHAT
+    function handleKeyDown(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
+    function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 140) + 'px'; }
 
-            // Show thinking indicator
-            isWaiting = true;
-            const thinkingEl = addThinkingIndicator();
-
-            try {
-                const res = await fetch('/api/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message })
-                });
-                const data = await res.json();
-                thinkingEl.remove();
-
-                if (data.error) {
-                    addAssistantMessage("I seem to be experiencing some difficulty: " + data.error, []);
-                } else {
-                    addAssistantMessage(data.response, data.sources || []);
-                    // Voice output
-                    if (voiceOutputEnabled) {
-                        speak(data.response);
+    async function sendMessage(overrideMsg) {
+        const input = document.getElementById('chat-input');
+        const message = overrideMsg || input.value.trim();
+        if (!message || isWaiting) return;
+        if (!overrideMsg) { input.value = ''; input.style.height = 'auto'; }
+        addUserMessage(message);
+        chatMessages.push({role: 'user', content: message});
+        isWaiting = true;
+        const msgDiv = addStreamingMessage();
+        const contentEl = msgDiv.querySelector('.message-content');
+        let fullText = '', sources = [], suggestions = [], emotion = 'neutral', confidence = 'grounded';
+        try {
+            const res = await fetch('/api/chat/stream', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({message})
+            });
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            while (true) {
+                const {done, value} = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, {stream: true});
+                const lines = buffer.split('\n');
+                buffer = lines.pop();
+                let eventType = '';
+                for (const line of lines) {
+                    if (line.startsWith('event: ')) eventType = line.slice(7).trim();
+                    else if (line.startsWith('data: ') && eventType) {
+                        try {
+                            const data = JSON.parse(line.slice(6));
+                            if (eventType === 'token') { fullText += data.content; contentEl.innerHTML = escapeHtml(fullText).replace(/\n/g, '<br>'); scrollToBottom(); }
+                            else if (eventType === 'sources') sources = data.sources || [];
+                            else if (eventType === 'suggestions') suggestions = data.suggestions || [];
+                            else if (eventType === 'emotion') emotion = data.emotion || 'neutral';
+                            else if (eventType === 'confidence') confidence = data.level || 'grounded';
+                        } catch(e) {}
+                        eventType = '';
                     }
                 }
-                loadMemoryStats();
-            } catch (err) {
-                thinkingEl.remove();
-                addAssistantMessage("A technical disturbance has interrupted my thoughts. Please try again.", []);
             }
-            isWaiting = false;
-            input.focus();
+        } catch(err) {
+            fullText = fullText || 'A technical disturbance occurred. Please try again.';
+            contentEl.innerHTML = escapeHtml(fullText);
         }
-
-        function addUserMessage(text) {
-            const container = document.getElementById('messages');
-            const div = document.createElement('div');
-            div.className = 'message user';
-            div.innerHTML = `
-                <div class="message-avatar">You</div>
-                <div class="message-body">
-                    <div class="message-role">You</div>
-                    <div class="message-content">${escapeHtml(text)}</div>
-                </div>
-            `;
-            container.appendChild(div);
-            scrollToBottom();
+        // Finalize message
+        chatMessages.push({role: 'assistant', content: fullText});
+        const body = msgDiv.querySelector('.message-body');
+        // Emotion dot
+        const avatar = msgDiv.querySelector('.message-avatar');
+        avatar.innerHTML = 'NT<span class="emotion-dot emotion-' + emotion + '"></span>';
+        // Confidence badge
+        const badge = document.createElement('div');
+        badge.className = 'confidence-badge confidence-' + confidence;
+        badge.textContent = confidence === 'grounded' ? 'From my writings' : confidence === 'inferred' ? 'From my recollection' : 'Beyond my time';
+        body.appendChild(badge);
+        // Sources
+        if (sources.length > 0) {
+            const panel = document.createElement('div');
+            panel.className = 'sources-panel';
+            panel.innerHTML = '<div class="sources-title">Sources Referenced</div><div class="source-chips">' +
+                sources.map((s,i) => '<span class="source-chip" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display===\'block\'?\'none\':\'block\'">' + escapeHtml(s.work.substring(0,35)) + '</span><div class="source-preview">' + escapeHtml(s.text_preview) + '</div>').join('') + '</div>';
+            body.appendChild(panel);
         }
-
-        function addAssistantMessage(text, sources) {
-            const container = document.getElementById('messages');
-            const div = document.createElement('div');
-            div.className = 'message assistant';
-
-            let sourcesHtml = '';
-            if (sources && sources.length > 0) {
-                const chips = sources.map((s, i) =>
-                    `<span class="source-chip" onclick="toggleSourcePreview(this, ${i})">${escapeHtml(s.work.substring(0, 40))}</span>`
-                ).join('');
-                const previews = sources.map((s, i) =>
-                    `<div class="source-preview" id="source-preview-${Date.now()}-${i}">${escapeHtml(s.text_preview)}</div>`
-                ).join('');
-                sourcesHtml = `
-                    <div class="sources-panel">
-                        <div class="sources-title">Sources Referenced</div>
-                        <div class="source-chips">${chips}</div>
-                        ${previews}
-                    </div>
-                `;
-            }
-
-            // Convert newlines to <br> for display
-            const formattedText = escapeHtml(text).replace(/\n/g, '<br>');
-
-            div.innerHTML = `
-                <div class="message-avatar">NT</div>
-                <div class="message-body">
-                    <div class="message-role">Nikola Tesla</div>
-                    <div class="message-content">${formattedText}</div>
-                    ${sourcesHtml}
-                </div>
-            `;
-            container.appendChild(div);
-            scrollToBottom();
+        // Suggestions
+        if (suggestions.length > 0) {
+            const sugDiv = document.createElement('div');
+            sugDiv.className = 'suggestions';
+            suggestions.forEach(s => {
+                const btn = document.createElement('button');
+                btn.className = 'suggestion-chip';
+                btn.textContent = s;
+                btn.onclick = () => sendMessage(s);
+                sugDiv.appendChild(btn);
+            });
+            body.appendChild(sugDiv);
         }
+        if (voiceOutputEnabled) speak(fullText);
+        loadMemoryStats();
+        isWaiting = false;
+        document.getElementById('chat-input').focus();
+    }
 
-        function addThinkingIndicator() {
-            const container = document.getElementById('messages');
-            const div = document.createElement('div');
-            div.className = 'message assistant';
-            div.id = 'thinking-indicator';
-            div.innerHTML = `
-                <div class="message-avatar">NT</div>
-                <div class="message-body">
-                    <div class="message-role">Nikola Tesla</div>
-                    <div class="message-content">
-                        <div class="thinking">
-                            <span></span><span></span><span></span>
-                        </div>
-                    </div>
-                </div>
-            `;
-            container.appendChild(div);
-            scrollToBottom();
-            return div;
+    function addUserMessage(text) {
+        const c = document.getElementById('messages');
+        const d = document.createElement('div'); d.className = 'message user';
+        d.innerHTML = '<div class="message-avatar">You</div><div class="message-body"><div class="message-role">You</div><div class="message-content">' + escapeHtml(text) + '</div></div>';
+        c.appendChild(d); scrollToBottom();
+    }
+
+    function addAssistantMessage(text, sources, emotion, confidence, suggestions) {
+        const c = document.getElementById('messages');
+        const d = document.createElement('div'); d.className = 'message assistant';
+        const formatted = escapeHtml(text).replace(/\n/g, '<br>');
+        let html = '<div class="message-avatar">NT<span class="emotion-dot emotion-' + (emotion||'neutral') + '"></span></div><div class="message-body"><div class="message-role">Nikola Tesla</div><div class="message-content">' + formatted + '</div>';
+        if (confidence) html += '<div class="confidence-badge confidence-' + confidence + '">' + (confidence==='grounded'?'From my writings':confidence==='inferred'?'From my recollection':'Beyond my time') + '</div>';
+        html += '</div>';
+        d.innerHTML = html;
+        c.appendChild(d); scrollToBottom();
+    }
+
+    function addStreamingMessage() {
+        const c = document.getElementById('messages');
+        const d = document.createElement('div'); d.className = 'message assistant';
+        d.innerHTML = '<div class="message-avatar">NT</div><div class="message-body"><div class="message-role">Nikola Tesla</div><div class="message-content"><div class="thinking"><span></span><span></span><span></span></div></div></div>';
+        c.appendChild(d); scrollToBottom();
+        return d;
+    }
+
+    function scrollToBottom() { const c = document.getElementById('messages'); setTimeout(() => c.scrollTop = c.scrollHeight, 30); }
+    function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+    // VOICE
+    function toggleVoiceOutput() { voiceOutputEnabled = !voiceOutputEnabled; document.getElementById('toggle-tts').classList.toggle('active', voiceOutputEnabled); showToast(voiceOutputEnabled ? 'Voice output enabled' : 'Voice output disabled'); }
+    function toggleVoiceInput() { voiceInputEnabled = !voiceInputEnabled; document.getElementById('toggle-mic').classList.toggle('active', voiceInputEnabled); document.getElementById('mic-btn').style.display = voiceInputEnabled ? 'flex' : 'none'; if (!voiceInputEnabled && isRecording) stopRecording(); }
+    function speak(text) {
+        if (!('speechSynthesis' in window)) return;
+        speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text.replace(/[*#_]/g, ''));
+        u.rate = 0.9; u.pitch = 0.85;
+        const voices = speechSynthesis.getVoices();
+        const v = voices.find(v => v.lang.startsWith('en') && v.name.toLowerCase().includes('male')) || voices.find(v => v.lang.startsWith('en-'));
+        if (v) u.voice = v;
+        speechSynthesis.speak(u);
+    }
+    if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
+    function toggleRecording() { isRecording ? stopRecording() : startRecording(); }
+    function startRecording() {
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SR) { showToast('Speech recognition not supported'); return; }
+        recognition = new SR(); recognition.continuous = false; recognition.interimResults = false; recognition.lang = 'en-US';
+        recognition.onstart = () => { isRecording = true; document.getElementById('mic-btn').classList.add('recording'); showToast('Listening...'); };
+        recognition.onresult = (e) => { document.getElementById('chat-input').value = e.results[0][0].transcript; sendMessage(); };
+        recognition.onerror = (e) => { showToast('Voice error: ' + e.error); stopRecording(); };
+        recognition.onend = () => stopRecording();
+        recognition.start();
+    }
+    function stopRecording() { isRecording = false; document.getElementById('mic-btn').classList.remove('recording'); if (recognition) { recognition.stop(); recognition = null; } }
+
+    // MEMORY
+    async function loadMemoryStats() {
+        try {
+            const r = await fetch('/api/memory'); const d = await r.json();
+            document.getElementById('stat-sessions').textContent = d.total_sessions || 0;
+            document.getElementById('stat-messages').textContent = d.current_messages || 0;
+            const sc = document.getElementById('recent-sessions'), ss = document.getElementById('recent-sessions-section');
+            if (d.recent_sessions && d.recent_sessions.length > 0) {
+                ss.style.display = 'block';
+                sc.innerHTML = d.recent_sessions.map(s => '<div class="session-item"><div class="session-text">' + escapeHtml(s.summary||'No summary').substring(0,120) + '</div><button class="session-delete" onclick="deleteSession(\'' + escapeHtml(s.id) + '\')" title="Delete">x</button></div>').join('');
+            } else { ss.style.display = 'none'; }
+        } catch(e) {}
+    }
+
+    // SESSION
+    async function endSession() {
+        try { const r = await fetch('/api/session/end', {method:'POST'}); const d = await r.json(); showToast('Session saved'); document.getElementById('messages').innerHTML=''; chatMessages=[]; const g="A new session begins. What shall we discuss?"; addAssistantMessage(g,[],null,null,[]); chatMessages.push({role:'assistant',content:g}); loadMemoryStats(); } catch(e) { showToast('Error saving'); }
+    }
+    async function clearChat() {
+        try { await fetch('/api/session/clear',{method:'POST'}); document.getElementById('messages').innerHTML=''; chatMessages=[]; const g="The slate is clean. What would you like to explore?"; addAssistantMessage(g,[],null,null,[]); chatMessages.push({role:'assistant',content:g}); showToast('Cleared'); loadMemoryStats(); } catch(e) {}
+    }
+    async function deleteSession(id) {
+        try { const r = await fetch('/api/session/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:id})}); const d = await r.json(); if (d.status==='deleted') { showToast('Deleted'); loadMemoryStats(); } } catch(e) {}
+    }
+
+    // EXPORT
+    async function exportChat() {
+        if (chatMessages.length < 2) { showToast('No messages to export'); return; }
+        try {
+            const r = await fetch('/api/export', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({messages:chatMessages,format:'markdown'})});
+            const blob = await r.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = 'tesla_conversation.md'; a.click();
+            URL.revokeObjectURL(url); showToast('Chat exported');
+        } catch(e) { showToast('Export failed'); }
+    }
+
+    // TIMELINE
+    async function loadTimeline() {
+        const c = document.getElementById('timeline-content');
+        if (c.children.length > 0) return;
+        try {
+            const r = await fetch('/api/timeline'); const d = await r.json();
+            c.innerHTML = d.events.map(e => '<div class="timeline-item" onclick="closeModal(\'timeline-modal\');sendMessage(\'Tell me about ' + escapeHtml(e.title) + '\')"><div class="timeline-dot"></div><div class="timeline-year">' + e.year + '</div><div class="timeline-card"><h4>' + escapeHtml(e.title) + '</h4><p>' + escapeHtml(e.description) + '</p></div></div>').join('');
+        } catch(e) { c.innerHTML = '<p>Error loading timeline</p>'; }
+    }
+
+    // QUIZ
+    async function loadQuiz() {
+        const c = document.getElementById('quiz-container');
+        c.innerHTML = '<p>Generating question...</p>';
+        try {
+            const r = await fetch('/api/quiz/generate', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({})});
+            currentQuiz = await r.json();
+            renderQuiz();
+        } catch(e) { c.innerHTML = '<p>Error loading quiz</p>'; }
+    }
+    function renderQuiz() {
+        if (!currentQuiz) return;
+        const c = document.getElementById('quiz-container');
+        c.innerHTML = '<div class="quiz-score">Score: ' + quizScore + ' / ' + quizTotal + '</div><div class="quiz-question">' + escapeHtml(currentQuiz.question) + '</div><div class="quiz-options">' +
+            currentQuiz.options.map((o,i) => '<button class="quiz-option" onclick="checkQuiz(' + i + ')">' + escapeHtml(o) + '</button>').join('') + '</div>';
+    }
+    async function checkQuiz(idx) {
+        if (!currentQuiz) return;
+        quizTotal++;
+        const btns = document.querySelectorAll('.quiz-option');
+        btns.forEach((b,i) => { b.disabled = true; if (i === currentQuiz.correct_index) b.classList.add('correct'); if (i === idx && i !== currentQuiz.correct_index) b.classList.add('wrong'); });
+        if (idx === currentQuiz.correct_index) quizScore++;
+        try {
+            const r = await fetch('/api/quiz/check', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({question:currentQuiz.question, user_answer:currentQuiz.options[idx], correct_answer:currentQuiz.options[currentQuiz.correct_index]})});
+            const d = await r.json();
+            const fb = document.createElement('div'); fb.className = 'quiz-feedback'; fb.textContent = d.feedback || currentQuiz.explanation;
+            const nb = document.createElement('button'); nb.className = 'quiz-next-btn'; nb.textContent = 'Next Question'; nb.onclick = loadQuiz;
+            const c = document.getElementById('quiz-container');
+            c.querySelector('.quiz-score').textContent = 'Score: ' + quizScore + ' / ' + quizTotal;
+            c.appendChild(fb); c.appendChild(nb);
+        } catch(e) {}
+    }
+
+    // DEBATE
+    async function startDebate() {
+        const topic = document.getElementById('debate-topic').value.trim() || 'AC vs DC power';
+        const panels = document.getElementById('debate-panels');
+        panels.style.display = 'grid';
+        document.getElementById('debate-tesla').textContent = 'Thinking...';
+        document.getElementById('debate-edison').textContent = 'Thinking...';
+        try {
+            const r = await fetch('/api/debate', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({topic})});
+            const d = await r.json();
+            document.getElementById('debate-tesla').textContent = d.tesla_response;
+            document.getElementById('debate-edison').textContent = d.edison_response;
+        } catch(e) { document.getElementById('debate-tesla').textContent = 'Error'; document.getElementById('debate-edison').textContent = 'Error'; }
+    }
+
+    // PDF UPLOAD
+    async function uploadPDF(input) {
+        const file = input.files[0]; if (!file) return;
+        const status = document.getElementById('upload-status');
+        status.textContent = 'Uploading and processing...';
+        const fd = new FormData(); fd.append('file', file);
+        try {
+            const r = await fetch('/api/upload-pdf', {method:'POST', body:fd});
+            const d = await r.json();
+            if (d.status === 'success') { status.textContent = 'Added ' + d.chunks_added + ' chunks from ' + d.filename; showToast('PDF added to knowledge base'); }
+            else status.textContent = 'Error: ' + d.error;
+        } catch(e) { status.textContent = 'Upload failed'; }
+        input.value = '';
+    }
+
+    // KNOWLEDGE GRAPH
+    function drawGraph() {
+        const canvas = document.getElementById('graph-canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
+        const W = canvas.width, H = canvas.height;
+        const nodes = [
+            {id:'Tesla',x:W/2,y:H/2,color:'#ffd700',r:22,type:'person'},
+            {id:'Edison',x:W/2-180,y:H/2-100,color:'#ffd700',r:16,type:'person'},
+            {id:'Westinghouse',x:W/2+180,y:H/2-80,color:'#ffd700',r:16,type:'person'},
+            {id:'Mark Twain',x:W/2+200,y:H/2+120,color:'#ffd700',r:14,type:'person'},
+            {id:'J.P. Morgan',x:W/2-200,y:H/2+100,color:'#ffd700',r:14,type:'person'},
+            {id:'AC Power',x:W/2+120,y:H/2-180,color:'#00d4ff',r:16,type:'invention'},
+            {id:'DC Power',x:W/2-120,y:H/2-180,color:'#00d4ff',r:14,type:'invention'},
+            {id:'Tesla Coil',x:W/2-80,y:H/2+160,color:'#00d4ff',r:16,type:'invention'},
+            {id:'Radio',x:W/2+80,y:H/2+180,color:'#00d4ff',r:14,type:'invention'},
+            {id:'Wardenclyffe',x:W/2-160,y:H/2+40,color:'#a855f7',r:14,type:'place'},
+            {id:'Colorado Springs',x:W/2+160,y:H/2+40,color:'#a855f7',r:14,type:'place'},
+            {id:'Niagara Falls',x:W/2+60,y:H/2-100,color:'#a855f7',r:14,type:'place'},
+            {id:'Serbia',x:W/2-60,y:H/2-120,color:'#a855f7',r:12,type:'place'},
+            {id:'Rotating Field',x:W/2-30,y:H/2+100,color:'#2ed573',r:14,type:'concept'},
+            {id:'Wireless Energy',x:W/2+30,y:H/2-60,color:'#2ed573',r:14,type:'concept'},
+            {id:'War of Currents',x:W/2,y:H/2-160,color:'#2ed573',r:14,type:'concept'},
+            {id:'X-rays',x:W/2+240,y:H/2-20,color:'#00d4ff',r:12,type:'invention'},
+            {id:'Patents',x:W/2-240,y:H/2-30,color:'#2ed573',r:12,type:'concept'},
+        ];
+        const edges = [
+            ['Tesla','AC Power'],['Tesla','Tesla Coil'],['Tesla','Radio'],['Tesla','Wardenclyffe'],
+            ['Tesla','Colorado Springs'],['Tesla','Edison'],['Tesla','Westinghouse'],['Tesla','Mark Twain'],
+            ['Tesla','J.P. Morgan'],['Tesla','Niagara Falls'],['Tesla','Serbia'],['Tesla','Rotating Field'],
+            ['Tesla','Wireless Energy'],['Tesla','X-rays'],['Tesla','Patents'],
+            ['Edison','DC Power'],['Edison','War of Currents'],['AC Power','War of Currents'],
+            ['DC Power','War of Currents'],['Westinghouse','AC Power'],['Westinghouse','Niagara Falls'],
+            ['J.P. Morgan','Wardenclyffe'],['AC Power','Rotating Field'],['Wardenclyffe','Wireless Energy'],
+        ];
+        // Simple force sim
+        const nodeMap = {}; nodes.forEach(n => nodeMap[n.id] = n);
+        for (let iter = 0; iter < 80; iter++) {
+            nodes.forEach(a => { nodes.forEach(b => { if (a===b) return; let dx=a.x-b.x, dy=a.y-b.y, d=Math.sqrt(dx*dx+dy*dy)||1; if(d<100){let f=(100-d)*0.03; a.x+=dx/d*f; a.y+=dy/d*f;} }); });
+            edges.forEach(([aId,bId]) => { const a=nodeMap[aId],b=nodeMap[bId]; let dx=b.x-a.x,dy=b.y-a.y,d=Math.sqrt(dx*dx+dy*dy)||1; let f=(d-120)*0.005; a.x+=dx/d*f; a.y+=dy/d*f; b.x-=dx/d*f; b.y-=dy/d*f; });
+            nodes.forEach(n => { n.x=Math.max(n.r+10,Math.min(W-n.r-10,n.x)); n.y=Math.max(n.r+10,Math.min(H-n.r-10,n.y)); });
         }
+        // Draw
+        ctx.clearRect(0,0,W,H);
+        edges.forEach(([aId,bId]) => {
+            const a=nodeMap[aId],b=nodeMap[bId];
+            ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
+            ctx.strokeStyle='rgba(0,212,255,0.15)'; ctx.lineWidth=1; ctx.stroke();
+        });
+        nodes.forEach(n => {
+            ctx.beginPath(); ctx.arc(n.x,n.y,n.r,0,Math.PI*2);
+            ctx.fillStyle=n.color+'33'; ctx.fill();
+            ctx.strokeStyle=n.color; ctx.lineWidth=2; ctx.stroke();
+            ctx.shadowColor=n.color; ctx.shadowBlur=10;
+            ctx.beginPath(); ctx.arc(n.x,n.y,n.r-2,0,Math.PI*2); ctx.strokeStyle=n.color+'88'; ctx.lineWidth=1; ctx.stroke();
+            ctx.shadowBlur=0;
+            ctx.fillStyle='#e8eaff'; ctx.font=(n.r>16?'11':'9')+'px Inter'; ctx.textAlign='center'; ctx.textBaseline='middle';
+            ctx.fillText(n.id,n.x,n.y);
+        });
+        // Click handler
+        canvas.onclick = (e) => {
+            const rect=canvas.getBoundingClientRect(); const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+            for (const n of nodes) { if (Math.sqrt((mx-n.x)**2+(my-n.y)**2) < n.r+4) { closeModal('graph-modal'); sendMessage('Tell me about ' + n.id); break; } }
+        };
+    }
 
-        function toggleSourcePreview(chip, index) {
-            const panel = chip.closest('.sources-panel');
-            const previews = panel.querySelectorAll('.source-preview');
-            const preview = previews[index];
-            if (preview) {
-                preview.style.display = preview.style.display === 'block' ? 'none' : 'block';
-            }
-        }
-
-        function scrollToBottom() {
-            const container = document.getElementById('messages');
-            setTimeout(() => {
-                container.scrollTop = container.scrollHeight;
-            }, 50);
-        }
-
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        // ===== VOICE OUTPUT (Web Speech API) =====
-        function toggleVoiceOutput() {
-            voiceOutputEnabled = !voiceOutputEnabled;
-            document.getElementById('toggle-tts').classList.toggle('active', voiceOutputEnabled);
-            showToast(voiceOutputEnabled ? 'Voice output enabled' : 'Voice output disabled');
-        }
-
-        function speak(text) {
-            if (!('speechSynthesis' in window)) {
-                showToast('Speech synthesis not supported in this browser');
-                return;
-            }
-            // Clean text
-            const clean = text.replace(/\*/g, '').replace(/#/g, '').replace(/_/g, '');
-            // Cancel any ongoing speech
-            speechSynthesis.cancel();
-            const utterance = new SpeechSynthesisUtterance(clean);
-            utterance.rate = 0.9;
-            utterance.pitch = 0.85;
-            utterance.volume = 1;
-            // Try to use a male English voice
-            const voices = speechSynthesis.getVoices();
-            const preferred = voices.find(v =>
-                v.lang.startsWith('en') && v.name.toLowerCase().includes('male')
-            ) || voices.find(v => v.lang.startsWith('en-'));
-            if (preferred) utterance.voice = preferred;
-            speechSynthesis.speak(utterance);
-        }
-
-        // Load voices (some browsers load async)
-        if ('speechSynthesis' in window) {
-            speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
-        }
-
-        // ===== VOICE INPUT (Web Speech API) =====
-        function toggleVoiceInput() {
-            voiceInputEnabled = !voiceInputEnabled;
-            document.getElementById('toggle-mic').classList.toggle('active', voiceInputEnabled);
-            document.getElementById('mic-btn').style.display = voiceInputEnabled ? 'flex' : 'none';
-            showToast(voiceInputEnabled ? 'Voice input enabled' : 'Voice input disabled');
-            if (!voiceInputEnabled && isRecording) {
-                stopRecording();
-            }
-        }
-
-        function toggleRecording() {
-            if (isRecording) {
-                stopRecording();
-            } else {
-                startRecording();
-            }
-        }
-
-        function startRecording() {
-            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-                showToast('Speech recognition not supported. Use Chrome or Edge.');
-                return;
-            }
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            recognition = new SpeechRecognition();
-            recognition.continuous = false;
-            recognition.interimResults = false;
-            recognition.lang = 'en-US';
-
-            recognition.onstart = () => {
-                isRecording = true;
-                document.getElementById('mic-btn').classList.add('recording');
-                showToast('Listening...');
-            };
-
-            recognition.onresult = (event) => {
-                const transcript = event.results[0][0].transcript;
-                document.getElementById('chat-input').value = transcript;
-                sendMessage();
-            };
-
-            recognition.onerror = (event) => {
-                showToast('Voice error: ' + event.error);
-                stopRecording();
-            };
-
-            recognition.onend = () => {
-                stopRecording();
-            };
-
-            recognition.start();
-        }
-
-        function stopRecording() {
-            isRecording = false;
-            document.getElementById('mic-btn').classList.remove('recording');
-            if (recognition) {
-                recognition.stop();
-                recognition = null;
-            }
-        }
-
-        // ===== MEMORY =====
-        async function loadMemoryStats() {
-            try {
-                const res = await fetch('/api/memory');
-                const data = await res.json();
-                document.getElementById('stat-sessions').textContent = data.total_sessions || 0;
-                document.getElementById('stat-messages').textContent = data.current_messages || 0;
-
-                // Recent sessions
-                const sessionsContainer = document.getElementById('recent-sessions');
-                const sessionsSection = document.getElementById('recent-sessions-section');
-                if (data.recent_sessions && data.recent_sessions.length > 0) {
-                    sessionsSection.style.display = 'block';
-                    sessionsContainer.innerHTML = data.recent_sessions.map(s =>
-                        `<div class="session-item" id="session-${escapeHtml(s.id)}">
-                            <div class="session-text">${escapeHtml(s.summary || 'No summary').substring(0, 120)}</div>
-                            <button class="session-delete" onclick="deleteSession('${escapeHtml(s.id)}')" title="Delete session">x</button>
-                        </div>`
-                    ).join('');
-                } else {
-                    sessionsSection.style.display = 'none';
-                }
-            } catch (err) {
-                // Silent fail
-            }
-        }
-
-        // ===== SESSION MANAGEMENT =====
-        async function endSession() {
-            try {
-                const res = await fetch('/api/session/end', { method: 'POST' });
-                const data = await res.json();
-                showToast('Session saved: ' + (data.summary || '').substring(0, 60));
-                document.getElementById('messages').innerHTML = '';
-                loadMemoryStats();
-                // Re-add greeting
-                addAssistantMessage(
-                    "A new session begins. What shall we discuss?", []
-                );
-            } catch (err) {
-                showToast('Error ending session');
-            }
-        }
-
-        async function clearChat() {
-            try {
-                await fetch('/api/session/clear', { method: 'POST' });
-                document.getElementById('messages').innerHTML = '';
-                addAssistantMessage(
-                    "The slate is clean. What would you like to explore?", []
-                );
-                showToast('Chat cleared');
-                loadMemoryStats();
-            } catch (err) {
-                showToast('Error clearing chat');
-            }
-        }
-
-        async function deleteSession(sessionId) {
-            if (!sessionId) return;
-            try {
-                const res = await fetch('/api/session/delete', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ session_id: sessionId })
-                });
-                const data = await res.json();
-                if (data.status === 'deleted') {
-                    showToast('Session deleted');
-                    loadMemoryStats();
-                } else {
-                    showToast('Error: ' + (data.error || 'Could not delete'));
-                }
-            } catch (err) {
-                showToast('Error deleting session');
-            }
-        }
-
-        // ===== TOAST =====
-        function showToast(message) {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 2500);
-        }
+    // TOAST
+    function showToast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); }
     </script>
 </body>
 </html>
