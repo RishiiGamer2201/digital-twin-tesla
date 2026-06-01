@@ -1,3 +1,13 @@
+---
+title: Digital Twin of Nikola Tesla
+emoji: ⚡
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # Digital Twin of Nikola Tesla
 
 **AIMS DTU Summer Project 2026**
