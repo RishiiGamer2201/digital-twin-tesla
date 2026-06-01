@@ -14,6 +14,8 @@ pinned: false
 
 A Digital Twin of Nikola Tesla, grounded in his actual writings, patents, and interviews. Ask Tesla about his inventions, philosophy, and vision for the future. Powered by RAG (Retrieval-Augmented Generation), long-term memory, and Google Gemini AI.
 
+**Live Demo: [logicpalette-digital-twin-tesla.hf.space](https://logicpalette-digital-twin-tesla.hf.space/)**
+
 ---
 
 ## Features Overview
