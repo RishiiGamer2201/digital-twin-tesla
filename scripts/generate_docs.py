@@ -53,6 +53,20 @@ run.font.size = Pt(12)
 run.font.color.rgb = RGBColor(120, 120, 120)
 
 doc.add_paragraph()
+name_p = doc.add_paragraph()
+name_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+run = name_p.add_run('Rishii Kumar Singh')
+run.font.size = Pt(14)
+run.bold = True
+run.font.color.rgb = RGBColor(50, 50, 50)
+
+roll_p = doc.add_paragraph()
+roll_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+run = roll_p.add_run('Roll No: 25/B18/073')
+run.font.size = Pt(12)
+run.font.color.rgb = RGBColor(100, 100, 100)
+
+doc.add_paragraph()
 repo = doc.add_paragraph()
 repo.alignment = WD_ALIGN_PARAGRAPH.CENTER
 run = repo.add_run('GitHub: github.com/RishiiGamer2201/digital-twin-tesla')
@@ -698,6 +712,6 @@ for i, ref in enumerate(refs, 1):
     doc.add_paragraph(f'[{i}] {ref}')
 
 # ---- Save ----
-output_path = r'C:\Users\seast\VSCODE\digital-twin-tesla\docs\Digital_Twin_Tesla_Documentation.docx'
+output_path = r'C:\Users\seast\Downloads\Digital_Twin_Tesla_Documentation.docx'
 doc.save(output_path)
 print(f'Document saved to: {output_path}')
