@@ -161,10 +161,42 @@ def delete_session():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
 # ============================================================
 # QUIZ ENDPOINTS
 # ============================================================
+
+@app.route("/api/session/details", methods=["POST"])
+def session_details():
+    """Get full details of a past session including facts."""
+    data = request.get_json()
+    session_id = data.get("session_id", "")
+    if not session_id:
+        return jsonify({"error": "No session_id provided"}), 400
+    try:
+        details = twin.memory.ltm.get_session_details(session_id)
+        if not details:
+            return jsonify({"error": "Session not found"}), 404
+        return jsonify({
+            "id": details.get("id", ""),
+            "timestamp": details.get("timestamp", ""),
+            "summary": details.get("summary", ""),
+            "topics": details.get("topics", "[]"),
+            "entities": details.get("entities", "[]"),
+            "message_count": details.get("message_count", 0),
+            "user_name": details.get("user_name", ""),
+            "facts": [
+                {
+                    "content": f.get("content", ""),
+                    "category": f.get("category", ""),
+                    "importance": f.get("importance", 0.5),
+                }
+                for f in details.get("facts", [])
+            ],
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 
 @app.route("/api/quiz/generate", methods=["POST"])
 def quiz_generate():

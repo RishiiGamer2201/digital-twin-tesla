@@ -121,3 +121,20 @@ class LongTermMemory:
             cursor = conn.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
             conn.commit()
             return cursor.rowcount > 0
+
+    def get_session_details(self, session_id: str) -> Dict:
+        """Return a single session with its associated facts."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            session = conn.execute(
+                "SELECT * FROM sessions WHERE id = ?", (session_id,)
+            ).fetchone()
+            if not session:
+                return {}
+            facts = conn.execute(
+                "SELECT * FROM facts WHERE session_id = ? ORDER BY created_at",
+                (session_id,)
+            ).fetchall()
+            result = dict(session)
+            result["facts"] = [dict(f) for f in facts]
+            return result
